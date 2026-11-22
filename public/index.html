@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Планирани спирания на тока · Planned power cuts</title>
+<meta name="description" content="Изберете населеното си място и получавайте известие, щом ЕРМ Запад обяви планирано спиране на тока. Pick your town and get notified about planned power cuts.">
+<meta property="og:title" content="Планирани спирания на тока · Planned power cuts">
+<meta property="og:description" content="Безплатно известие на телефона, щом за вашето населено място е планирано спиране на тока (ЕРМ Запад).">
+<meta property="og:image" content="/og.png">
+<meta property="og:type" content="website">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ток">
+<script src="/icons.js"></script>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #fff; --ink: #0f172a; --muted: #64748b; --label: #94a3b8;
+    --line: #e5e7eb; --accent: #1d4ed8; --accent-soft: #e8eefc;
+    --warn: #b45309; --warn-bg: #fef3c7; --ok: #15803d; --ok-bg: #dcfce7; --danger: #dc2626;
+    --r: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  svg.lucide { width: 20px; height: 20px; flex: none; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 0 16px calc(32px + env(safe-area-inset-bottom)); }
+
+  header { background: var(--ink); color: #fff; padding: calc(14px + env(safe-area-inset-top)) 0 56px; }
+  header .wrap { padding-bottom: 0; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 10px; background: #facc15; color: var(--ink); display: grid; place-items: center; }
+  .top-r { display: flex; align-items: center; gap: 8px; }
+  .hbell { position: relative; width: 38px; height: 38px; border-radius: 999px; background: rgba(255,255,255,.12);
+    color: #fff; display: grid; place-items: center; }
+  .hbell svg { width: 18px; height: 18px; }
+  .hbell.off { color: #94a3b8; }
+  .hbell .dot { position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: #ef4444;
+    box-shadow: 0 0 0 2px var(--ink); }
+  .lang { display: flex; background: rgba(255,255,255,.12); border-radius: 999px; padding: 3px; }
+  .lang button { padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #cbd5e1; }
+  .lang button.on { background: #fff; color: var(--ink); }
+  h1 { font-size: 26px; line-height: 1.15; margin: 22px 0 6px; letter-spacing: -.01em; }
+  .sub { color: #cbd5e1; font-size: 15px; margin: 0; }
+
+  .search { position: relative; margin-top: -32px; }
+  .field { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: var(--r);
+    padding: 0 14px; height: 58px; box-shadow: 0 6px 20px rgba(15,23,42,.12); border: 2px solid transparent; }
+  .field:focus-within { border-color: var(--accent); }
+  .field svg { color: var(--muted); }
+  .field input { flex: 1; border: 0; outline: 0; font: inherit; font-size: 17px; background: none; color: var(--ink); min-width: 0; }
+  .field input::-webkit-search-cancel-button { display: none; }
+  .field .clear { color: var(--label); padding: 6px; }
+  .sugg { position: absolute; left: 0; right: 0; top: 64px; background: var(--card); border-radius: var(--r);
+    box-shadow: 0 12px 32px rgba(15,23,42,.18); overflow: hidden; z-index: 20; }
+  .sugg button { display: flex; width: 100%; text-align: left; align-items: center; gap: 12px; padding: 12px 14px;
+    border-top: 1px solid var(--line); min-height: 58px; }
+  .sugg button:first-child { border-top: 0; }
+  .sugg button:active, .sugg button.hl { background: var(--accent-soft); }
+  .sugg .nm { font-weight: 600; }
+  .sugg .nm mark { background: none; color: var(--accent); }
+  .sugg .meta { color: var(--muted); font-size: 13px; }
+  .sugg .add { margin-left: auto; color: var(--accent); }
+  .sugg .badge { margin-left: auto; font-size: 12px; color: var(--warn); background: var(--warn-bg);
+    border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+  .sugg .other .nm, .sugg .other svg { color: var(--muted); }
+  .sugg .opb { margin-left: auto; font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+  .sugg .none { padding: 16px 14px; color: var(--muted); font-size: 15px; }
+
+  .label { font-size: 11px; color: var(--label); margin: 26px 4px 8px; }
+  .label-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+  .label-row .label { margin-bottom: 10px; white-space: nowrap; }
+  .sort { display: flex; background: #e5e7eb; border-radius: 999px; padding: 2px; margin-bottom: 8px; }
+  .sort button { font-size: 12px; padding: 5px 10px; border-radius: 999px; color: var(--muted); white-space: nowrap; }
+  .sort button.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(15,23,42,.1); }
+
+  .card { background: var(--card); border-radius: var(--r); margin-bottom: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(15,23,42,.06); }
+  .place-head { display: flex; align-items: center; gap: 12px; padding: 14px 10px 12px 16px; }
+  .place-head .t { flex: 1; min-width: 0; }
+  .place-head .nm { font-size: 19px; font-weight: 700; }
+  .place-head .meta { color: var(--muted); font-size: 13px; }
+  .del { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--label);
+    font-weight: 800; font-size: 18px; transition: background .15s, color .15s; }
+  .del.ask { background: var(--danger); color: #fff; }
+  .status { display: flex; gap: 10px; align-items: center; margin: 0 12px 12px; padding: 12px; border-radius: 12px; font-weight: 600; font-size: 15px; }
+  .status.ok { background: var(--ok-bg); color: var(--ok); }
+  .status.warn { background: var(--warn-bg); color: var(--warn); }
+  .out { border-top: 1px solid var(--line); padding: 10px 12px 10px 16px; display: flex; gap: 14px; align-items: center; }
+  .day { width: 62px; flex: none; text-align: center; border-radius: 12px; background: var(--bg); padding: 5px 0 6px; }
+  .day .wd { font-size: 11px; color: var(--muted); }
+  .day .d { font-size: 20px; font-weight: 750; line-height: 1.05; }
+  .day .m { font-size: 11px; color: var(--muted); }
+  .day.soon { background: var(--warn-bg); }
+  .day.soon .wd, .day.soon .m { color: var(--warn); }
+  .out .time { flex: 1; min-width: 0; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .src { width: 36px; height: 46px; display: grid; place-items: center; color: var(--label); flex: none; margin-right: -6px; }
+  .src svg { width: 19px; height: 19px; }
+  .cal { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+  .more { display: flex; width: 100%; justify-content: center; align-items: center; gap: 6px; padding: 14px;
+    border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: 15px; }
+
+  .notify { display: flex; gap: 14px; padding: 16px; align-items: center; }
+  .notify .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+  .notify.on .ic { background: var(--ok-bg); color: var(--ok); }
+  .notify.blocked .ic { background: #fee2e2; color: var(--danger); }
+  .notify.paused .ic { background: var(--bg); color: var(--muted); }
+  .notify .t { flex: 1; }
+  .notify .h { font-weight: 700; }
+  .notify .s { color: var(--muted); font-size: 14px; }
+  #nsheet .notify, #nsheet .opt { padding-left: 0; padding-right: 0; }
+  .btn { display: flex; width: 100%; justify-content: center; align-items: center; gap: 8px; height: 52px; border-radius: 14px;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 16px; }
+  .btn.ghost { background: var(--bg); color: var(--ink); }
+  .btn.small { height: 44px; font-size: 15px; font-weight: 600; margin-top: 4px; }
+  .btn:disabled { opacity: .6; }
+  .notify-btn { padding: 0 16px 16px; }
+  .switch { width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; flex: none; transition: background .2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+  .switch.on { background: var(--ok); }
+  .switch.on::after { transform: translateX(20px); }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); font-size: 15px; }
+  .opt span { flex: 1; }
+  .opt.dis { opacity: .4; pointer-events: none; }
+
+  .empty { text-align: center; padding: 34px 20px 10px; color: var(--muted); }
+  .empty .big { width: 64px; height: 64px; border-radius: 20px; background: var(--card); display: grid; place-items: center;
+    margin: 0 auto 14px; color: var(--accent); box-shadow: 0 1px 2px rgba(15,23,42,.06); }
+  .empty .big svg { width: 30px; height: 30px; }
+  .steps { text-align: left; margin: 18px auto 0; max-width: 340px; }
+  .steps div { display: flex; gap: 12px; align-items: center; padding: 8px 0; color: var(--ink); font-size: 15px; }
+  .steps b { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 13px; flex: none; }
+
+  footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; line-height: 1.6; }
+  footer a { color: var(--accent); }
+  footer .ver { margin-top: 12px; font-size: 12px; color: var(--label); }
+  footer .ver button { color: var(--accent); font-size: 12px; padding: 4px 2px; }
+  .update { display: flex; align-items: center; gap: 12px; background: var(--accent); color: #fff; border-radius: var(--r);
+    padding: 12px 14px; margin: 16px 0 0; font-size: 15px; font-weight: 600; width: 100%; text-align: left; }
+  .update[hidden] { display: none; }
+  .update .txt { flex: 1; }
+  .update [data-i] { display: grid; flex: none; }
+  footer .priv { margin-top: 10px; font-size: 12px; color: var(--label); }
+
+  .sheet-bg { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 50; display: none; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 51; background: var(--card); border-radius: 22px 22px 0 0;
+    padding: 10px 20px calc(20px + env(safe-area-inset-bottom)); max-width: 480px; margin: 0 auto; transform: translateY(110%); transition: transform .25s; }
+  .sheet.open { transform: none; }
+  .sheet-bg.open { display: block; }
+  .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 14px; }
+  .sheet h2 { font-size: 20px; margin: 0 0 6px; }
+  .sheet p { color: var(--muted); margin: 0 0 14px; font-size: 15px; }
+  .sheet .step { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .sheet .step .n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; }
+  .sheet .step .k { display: inline-flex; vertical-align: -4px; padding: 2px 6px; background: var(--bg); border-radius: 6px; }
+  .sheet .step .k svg { width: 16px; height: 16px; }
+
+  .toast { position: fixed; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); max-width: 460px; margin: 0 auto; z-index: 60;
+    background: rgba(250,250,250,.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 20px; padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.22); display: flex; gap: 12px; transform: translateY(-160%); transition: transform .35s cubic-bezier(.2,.9,.3,1.2); }
+  .toast.show { transform: none; }
+  .toast .logo { width: 38px; height: 38px; border-radius: 9px; background: #facc15; display: grid; place-items: center; flex: none; }
+  .toast .h { font-weight: 700; font-size: 15px; }
+  .toast .b { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><div class="logo" data-i="zap-off"></div><span data-t="brand"></span></div>
+      <div class="top-r">
+        <button class="hbell" id="hbell"></button>
+        <div class="lang"><button data-lang="bg">БГ</button><button data-lang="en">EN</button></div>
+      </div>
+    </div>
+    <h1 data-t="title"></h1>
+    <p class="sub" data-t="sub"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="search">
+    <label class="field">
+      <span data-i="search"></span>
+      <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button class="clear" id="clear" hidden data-i="x"></button>
+    </label>
+    <div class="sugg" id="sugg" hidden></div>
+  </div>
+
+  <button class="update" id="update" hidden><span data-i="refresh-cw"></span><span class="txt" data-t="updateAvail"></span><span data-i="chevron-right"></span></button>
+  <div id="content"></div>
+
+  <footer>
+    <span data-t="source"></span> <a href="https://info.ermzapad.bg/webint/vok/avplan.php?BBKING=FYI" target="_blank" rel="noopener">info.ermzapad.bg</a><br>
+    <span id="checked"></span><br>
+    <span data-t="unofficial"></span>
+    <div class="priv" data-t="privacy"></div>
+    <div class="ver"><span id="ver"></span> · <button id="reload" data-t="reload"></button></div>
+  </footer>
+</main>
+
+<div class="sheet-bg" id="sheetBg"></div>
+
+<!-- iPhone: erst zum Home-Bildschirm hinzufügen -->
+<div class="sheet" id="iosSheet">
+  <div class="grip"></div>
+  <h2 data-t="iosTitle"></h2>
+  <p data-t="iosText"></p>
+  <div class="step"><span class="n">1</span><span data-t="ios1"></span></div>
+  <div class="step"><span class="n">2</span><span data-t="ios2"></span></div>
+  <div class="step"><span class="n">3</span><span data-t="ios3"></span></div>
+  <button class="btn" data-close style="margin-top:14px" data-t="ok"></button>
+</div>
+
+<!-- Facebook/Instagram/Messenger-Browser: in echtem Browser öffnen -->
+<div class="sheet" id="inappSheet">
+  <div class="grip"></div>
+  <h2 data-t="inappTitle"></h2>
+  <p data-t="inappText"></p>
+  <div class="step"><span class="n">1</span><span data-t="inapp1"></span></div>
+  <div class="step"><span class="n">2</span><span data-t="inapp2"></span></div>
+  <button class="btn ghost" id="copyLink" style="margin-top:14px" data-t="copy"></button>
+  <button class="btn" data-close style="margin-top:10px" data-t="ok"></button>
+</div>
+
+<!-- Einstellungen der Benachrichtigungen -->
+<div class="sheet" id="nSheet">
+  <div class="grip"></div>
+  <div id="nSheetBody"></div>
+  <button class="btn ghost" data-close style="margin-top:14px" data-t="done"></button>
+</div>
+
+<div class="toast" id="toast">
+  <div class="logo" data-i="zap-off"></div>
+  <div style="flex:1"><div class="h" id="toastH"></div><div class="b" id="toastB"></div></div>
+</div>
+
+<script>
+"use strict";
+const APP_VERSION = {"v":8,"date":"2026-11-22T13:58"}; // wird von tools/bump-version.mjs gesetzt
+const T = {
+  bg: {
+    brand: "Ток · ЕРМ Запад", title: "Планирани спирания на тока",
+    sub: "Изберете населеното си място и получавайте известие, щом е обявено спиране.",
+    placeholder: "Населено място, напр. Банско",
+    myPlaces: "Моите места", noneFound: "Няма такова населено място в района на ЕРМ Запад.",
+    obsh: "общ.", obl: "обл.", raion: "р-н", capital: "София (столица)",
+    planned: n => n === 1 ? "1 спиране" : `${n} спирания`,
+    ok_status: "Няма планирани спирания", warn_status: n => n === 1 ? "1 планирано спиране" : `${n} планирани спирания`,
+    cal: "Добави в календара", until: "до", today: "Днес", tomorrow: "Утре",
+    less: "По-малко", moreN: n => `Още ${n} ${n === 1 ? "спиране" : "спирания"}`,
+    nOff: "Известия", nOffText: "Получавайте съобщение на телефона, щом за вашите места бъде обявено спиране.",
+    nOn: "Известията са включени", nOnText: "Ще ви съобщим веднага щом има нов план.",
+    nPaused: "Известията са изключени", nPausedText: "Разрешени са, но в момента не получавате съобщения.",
+    nBlocked: "Известията не са разрешени", allow: "Разреши известия", enable: "Включи известия",
+    deniedText: "Браузърът блокира известията за тази страница. Разрешете ги в настройките на браузъра за този сайт.",
+    unsupported: "Този браузър не поддържа известия. Отворете страницата в Chrome, Firefox или Safari.",
+    eve: "Напомняне вечерта преди спирането", test: "Изпрати пробно известие", testSent: "Пробното известие е изпратено",
+    testFail: "Пробното известие не можа да бъде изпратено", saveFail: "Настройката не можа да бъде запазена. Опитайте отново.",
+    emptyTitle: "Как работи", e1: "Въведете населеното си място", e2: "Включете известията", e3: "Получавате съобщение, щом е планирано спиране",
+    source: "Данни:", checked: "Последна проверка:", loading: "Зареждане…", loadFail: "Данните не можаха да бъдат заредени. Опитайте по-късно.",
+    unofficial: "Неофициална безплатна услуга. Не е свързана с ЕРМ Запад / Електрохолд.",
+    privacy: "Съхраняваме само избраните места и техническия адрес за известията на това устройство – без име, телефон или имейл. Изключите ли известията, адресът се изтрива.",
+    iosTitle: "Известия на iPhone", iosText: "На iPhone известията работят само ако страницата е добавена към началния екран.",
+    ios1: `Натиснете ${'<span class="k" data-i="share"></span>'} „Сподели“ в долната лента`,
+    ios2: `Изберете ${'<span class="k" data-i="square-plus"></span>'} „Добави към началния екран“`,
+    ios3: "Отворете иконата „Ток“ от началния екран и включете известията",
+    inappTitle: "Отворете в браузъра", inappText: "Във Facebook, Messenger и Instagram известията не работят. Отворете страницата в Chrome или Safari.",
+    inapp1: `Натиснете ${'<span class="k" data-i="ellipsis"></span>'} горе вдясно`,
+    inapp2: "Изберете „Отвори в браузъра“ (или „Отвори в Chrome“ / „Safari“)",
+    pdf: "Оригинален документ (PDF)",
+    sort_added: "Добавени", sort_az: "А–Я", sort_next: "Най-скоро",
+    reload: "Обнови", version: "Версия", updateAvail: "Има нова версия – натиснете, за да обновите",
+    otherOp: "друг оператор", otherTitle: n => `${n}: извън района на ЕРМ Запад`,
+    otherText: op => `Това населено място се захранва от ${op}. Услугата покрива само района на ЕРМ Запад.`,
+    copy: "Копирай връзката", copied: "Връзката е копирана",
+    ok: "Разбрах", done: "Готово", remove: "Премахни",
+    wd: ["нд","пн","вт","ср","чт","пт","сб"], mo: ["яну","фев","мар","апр","май","юни","юли","авг","сеп","окт","ное","дек"],
+  },
+  en: {
+    brand: "Power · ERM Zapad", title: "Planned power cuts",
+    sub: "Pick your town or village and get notified as soon as a power cut is announced.",
+    placeholder: "Town or village, e.g. Bansko",
+    myPlaces: "My places", noneFound: "No such town or village in the ERM Zapad area.",
+    obsh: "mun.", obl: "reg.", raion: "dist.", capital: "Sofia (capital)",
+    planned: n => n === 1 ? "1 cut" : `${n} cuts`,
+    ok_status: "No planned power cuts", warn_status: n => n === 1 ? "1 planned power cut" : `${n} planned power cuts`,
+    cal: "Add to calendar", until: "until", today: "Today", tomorrow: "Tomorrow",
+    less: "Show less", moreN: n => `${n} more ${n === 1 ? "power cut" : "power cuts"}`,
+    nOff: "Notifications", nOffText: "Get a message on your phone as soon as a power cut is planned for your places.",
+    nOn: "Notifications are on", nOnText: "We'll let you know as soon as a new plan is out.",
+    nPaused: "Notifications are off", nPausedText: "They're allowed, but you won't get messages right now.",
+    nBlocked: "Notifications not allowed", allow: "Allow notifications", enable: "Turn on notifications",
+    deniedText: "Your browser blocks notifications for this page. Allow them in your browser's site settings.",
+    unsupported: "This browser doesn't support notifications. Open the page in Chrome, Firefox or Safari.",
+    eve: "Reminder the evening before", test: "Send test notification", testSent: "Test notification sent",
+    testFail: "Couldn't send the test notification", saveFail: "Couldn't save the setting. Please try again.",
+    emptyTitle: "How it works", e1: "Enter your town or village", e2: "Turn on notifications", e3: "Get a message whenever a power cut is planned",
+    source: "Data:", checked: "Last checked:", loading: "Loading…", loadFail: "Couldn't load the data. Please try again later.",
+    unofficial: "Unofficial free service. Not affiliated with ERM Zapad / Electrohold.",
+    privacy: "We only store your chosen places and this device's technical notification address – no name, phone or email. Turn notifications off and the address is deleted.",
+    iosTitle: "Notifications on iPhone", iosText: "On iPhone, notifications only work once this page is added to the Home Screen.",
+    ios1: `Tap ${'<span class="k" data-i="share"></span>'} “Share” in the toolbar`,
+    ios2: `Choose ${'<span class="k" data-i="square-plus"></span>'} “Add to Home Screen”`,
+    ios3: "Open the “Ток” icon on your Home Screen and turn on notifications",
+    inappTitle: "Open in your browser", inappText: "Notifications don't work inside Facebook, Messenger or Instagram. Open the page in Chrome or Safari.",
+    inapp1: `Tap ${'<span class="k" data-i="ellipsis"></span>'} at the top right`,
+    inapp2: "Choose “Open in browser” (or “Open in Chrome” / “Safari”)",
+    pdf: "Original document (PDF)",
+    sort_added: "Added", sort_az: "A–Z", sort_next: "Next cut",
+    reload: "Refresh", version: "Version", updateAvail: "A new version is available – tap to update",
+    otherOp: "other operator", otherTitle: n => `${n}: outside ERM Zapad's area`,
+    otherText: op => `This place is supplied by ${op}. This service only covers the ERM Zapad area.`,
+    copy: "Copy link", copied: "Link copied",
+    ok: "Got it", done: "Done", remove: "Remove",
+    wd: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], mo: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  },
+};
+
+// ---------- Zustand ----------
+const KEY = "erm-outages";
+const S = Object.assign({ lang: (navigator.language || "").startsWith("bg") ? "bg" : (navigator.language ? "en" : "bg"),
+  places: [], notify: false, eve: true, expanded: [], sort: "added" }, JSON.parse(localStorage.getItem(KEY) || "{}"));
+const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+const t = k => T[S.lang][k];
+const icon = n => ICONS[n] || "";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const $ = id => document.getElementById(id);
+function paintIcons(root = document) { root.querySelectorAll("[data-i]").forEach(el => { el.innerHTML = icon(el.dataset.i); }); }
+
+// ---------- Zeit (Planzeiten sind Ortszeit Sofia) ----------
+function sofiaNow() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia", year: "numeric", month: "2-digit",
+    day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+const addDays = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const parts = s => { const [d, tm] = s.split("T"); const [y, m, dd] = d.split("-").map(Number); return { d, tm, y, m, dd, wd: new Date(Date.UTC(y, m - 1, dd)).getUTCDay() }; };
+
+// ---------- Orte ----------
+const TR = {а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"ts",ч:"ch",ш:"sh",щ:"sht",ъ:"a",ь:"y",ю:"yu",я:"ya"};
+const latin = s => s.toLowerCase().replace(/[а-я]/g, c => TR[c] ?? c);
+const fold = s => latin(s).replace(/[^a-z0-9]/g, "");
+const title = s => s.toLowerCase().replace(/(^|[\s.(-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+function prettyExtra(n) {
+  // Sofioter Viertel: "ЖК.ЛОЗЕНЕЦ" → ["ж.к. Лозенец", "zh.k. Lozenets"], "КВ. БЪКСТОН" → "кв. Бъкстон", "В.З.КИЛИИТЕ" → "в.з. Килиите"
+  const m = n.match(/^(Ж\.?\s?К\.?|КВ\.|В\.З\.)\s*(.*)$/);
+  if (!m) return [title(n), title(latin(n))];
+  const pre = { "КВ.": "кв.", "В.З.": "в.з." }[m[1]] || "ж.к.";
+  return [pre + " " + title(m[2]), latin(pre) + " " + title(latin(m[2]))];
+}
+let PLACES = [], BYID = new Map(), OUT = new Map(), CHECKED = null, LOADED = false, LOADFAIL = false;
+function buildPlaces(raw, extra) {
+  PLACES = raw.map(([id, n, ne, o, oe, r, re, typ, op]) => ({ id, n, ne, o, oe, r, re, typ, op }));
+  for (const [id, [n, o, r]] of Object.entries(extra || {})) {
+    const sof = r === "СОФИЯ-ГРАД";
+    const [nice, niceEn] = prettyExtra(n);
+    PLACES.push({ id, raw: n, n: nice, ne: niceEn, o: title(o), oe: title(latin(o)), r: sof ? null : title(r), re: sof ? null : title(latin(r)), sof, x: true });
+  }
+  for (const P of PLACES) {
+    P.f = fold(P.n); P.fe = fold(P.ne);
+    P.w = [...P.n.split(/[\s.-]+/), ...P.ne.split(/[\s.-]+/)].map(fold).filter(Boolean);
+  }
+  BYID = new Map(PLACES.map(P => [P.id, P]));
+}
+const shown = P => S.lang === "en" ? P.ne : P.n;
+function meta(P) {
+  if (P.x && P.sof) return `${t("raion")} ${S.lang === "en" ? P.oe : P.o} · ${t("capital")}`;
+  if (P.r === "София (столица)") return t("capital");
+  return `${t("obsh")} ${S.lang === "en" ? P.oe : P.o} · ${t("obl")} ${S.lang === "en" ? P.re : P.r}`;
+}
+function sortPlaces(list) {
+  if (S.sort === "az") return [...list].sort((a, b) => shown(a).localeCompare(shown(b), S.lang));
+  if (S.sort === "next") return [...list].sort((a, b) => {
+    const x = outagesFor(a.id)[0]?.s, y = outagesFor(b.id)[0]?.s;
+    return x && y ? x.localeCompare(y) : x ? -1 : y ? 1 : shown(a).localeCompare(shown(b), S.lang);
+  });
+  return list; // Reihenfolge des Hinzufügens, neueste oben
+}
+function outagesFor(id) { const now = sofiaNow(); return (OUT.get(id) || []).filter(o => o.e > now); }
+
+// ---------- Suche ----------
+const q = $("q"), sugg = $("sugg"), clearBtn = $("clear");
+let hits = [], hl = 0;
+function search(text) {
+  const f = fold(text);
+  if (!f) return [];
+  const res = [];
+  for (const P of PLACES) {
+    const score = (P.f.startsWith(f) || P.fe.startsWith(f)) ? 0 : P.w.some(w => w.startsWith(f)) ? 1 : (P.f.includes(f) || P.fe.includes(f)) ? 2 : -1;
+    if (score >= 0) res.push([score + (P.typ === "гр." ? 0 : 0.5) + (P.op ? 0.25 : 0), P]);
+  }
+  return res.sort((a, b) => a[0] - b[0] || a[1].n.length - b[1].n.length || a[1].n.localeCompare(b[1].n)).slice(0, 7).map(r => r[1]);
+}
+function markName(P, text) {
+  const name = shown(P), needle = text.trim().toLowerCase();
+  const i = needle ? name.toLowerCase().indexOf(needle) : -1;
+  if (i < 0) return esc(name);
+  return esc(name.slice(0, i)) + "<mark>" + esc(name.slice(i, i + needle.length)) + "</mark>" + esc(name.slice(i + needle.length));
+}
+function renderSugg() {
+  const text = q.value;
+  clearBtn.hidden = !text;
+  if (!text.trim() || !LOADED) { sugg.hidden = true; return; }
+  hits = search(text);
+  sugg.hidden = false;
+  if (!hits.length) { sugg.innerHTML = `<div class="none">${t("noneFound")}</div>`; return; }
+  sugg.innerHTML = hits.map((P, i) => {
+    const n = outagesFor(P.id).length, mine = S.places.includes(P.id);
+    if (P.op) return `<button data-k="${esc(P.id)}" class="other ${i === hl ? "hl" : ""}">
+      ${icon("map-pin")}
+      <span><div class="nm">${markName(P, text)}</div><div class="meta">${esc(meta(P))}</div></span>
+      <span class="opb">${t("otherOp")}</span>
+    </button>`;
+    return `<button data-k="${esc(P.id)}" class="${i === hl ? "hl" : ""}">
+      ${icon("map-pin")}
+      <span><div class="nm">${markName(P, text)}</div><div class="meta">${esc(meta(P))}</div></span>
+      ${n ? `<span class="badge">${t("planned")(n)}</span>` : `<span class="add">${icon(mine ? "check" : "plus")}</span>`}
+    </button>`;
+  }).join("");
+}
+function pick(id) {
+  const P = BYID.get(id);
+  if (P?.op) { flash(t("otherTitle")(shown(P)), t("otherText")(P.op === "EVN" ? "EVN" : (S.lang === "en" ? "Energo-Pro" : "Енерго-Про"))); return; }
+  if (!S.places.includes(id)) S.places.unshift(id);
+  save(); q.value = ""; hl = 0; renderSugg(); q.blur(); render(); syncSoon();
+}
+q.addEventListener("input", () => { hl = 0; renderSugg(); });
+q.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown") { hl = Math.min(hl + 1, hits.length - 1); renderSugg(); e.preventDefault(); }
+  if (e.key === "ArrowUp") { hl = Math.max(hl - 1, 0); renderSugg(); e.preventDefault(); }
+  if (e.key === "Enter" && hits[hl]) pick(hits[hl].id);
+  if (e.key === "Escape") { q.value = ""; renderSugg(); }
+});
+sugg.addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) pick(b.dataset.k); });
+clearBtn.addEventListener("click", e => { e.preventDefault(); q.value = ""; renderSugg(); q.focus(); });
+document.addEventListener("click", e => { if (!e.target.closest(".search")) sugg.hidden = true; });
+q.addEventListener("focus", renderSugg);
+
+// ---------- Darstellung ----------
+function dayLabel(d) {
+  const today = sofiaNow().slice(0, 10);
+  return d === today ? t("today") : d === addDays(today, 1) ? t("tomorrow") : null;
+}
+function timeRange(o) {
+  const a = parts(o.s), b = parts(o.e);
+  return a.d === b.d ? `${a.tm}–${b.tm}` : `${a.tm} – ${t("until")} ${b.dd} ${t("mo")[b.m - 1]} ${b.tm}`;
+}
+
+const content = $("content");
+let askTimer = null;
+function render() {
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll("[data-t]").forEach(el => { const v = t(el.dataset.t); if (typeof v === "string") el.innerHTML = v; });
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.lang === S.lang));
+  q.placeholder = t("placeholder");
+  $("checked").textContent = CHECKED ? `${t("checked")} ${new Date(CHECKED).toLocaleString(S.lang === "bg" ? "bg-BG" : "en-GB",
+    { timeZone: "Europe/Sofia", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "";
+  renderBell(); showVersion();
+
+  if (!LOADED) { content.innerHTML = `<div class="empty">${LOADFAIL ? t("loadFail") : t("loading")}</div>`; return paintIcons(); }
+
+  const places = sortPlaces(S.places.map(id => BYID.get(id)).filter(Boolean));
+  if (!places.length) {
+    content.innerHTML = `<div class="empty">
+      <div class="big">${icon("bell-ring")}</div>
+      <div style="font-weight:700;color:var(--ink);font-size:17px">${t("emptyTitle")}</div>
+      <div class="steps"><div><b>1</b>${t("e1")}</div><div><b>2</b>${t("e2")}</div><div><b>3</b>${t("e3")}</div></div>
+    </div>`;
+    return paintIcons();
+  }
+
+  const st = nState(), denied = perm() === "denied";
+  const card = st !== "blocked" ? ""
+    : `<div class="card"><div class="notify"><div class="ic">${icon("bell")}</div>
+         <div class="t"><div class="h">${t("nOff")}</div><div class="s">${denied ? t("deniedText") : t("nOffText")}</div></div></div>
+         ${denied ? "" : `<div class="notify-btn"><button class="btn" data-enable>${icon("bell-plus")}${t("enable")}</button></div>`}</div>`;
+
+  const cards = places.map(P => {
+    const outs = outagesFor(P.id), open = S.expanded.includes(P.id), more = outs.length - 2;
+    const status = outs.length
+      ? `<div class="status warn">${icon("zap-off")}${t("warn_status")(outs.length)}</div>`
+      : `<div class="status ok">${icon("circle-check")}${t("ok_status")}</div>`;
+    const list = outs.map((o, i) => {
+      if (i >= 2 && !open) return "";
+      const a = parts(o.s), lbl = dayLabel(a.d);
+      return `<div class="out">
+        <div class="day ${lbl ? "soon" : ""}"><div class="wd">${lbl || t("wd")[a.wd]}</div><div class="d">${a.dd}</div><div class="m">${t("mo")[a.m - 1]}</div></div>
+        <div class="time">${timeRange(o)}</div>
+        ${o.pd ? `<a class="src" href="/pdf.html?d=${o.pd}&q=${encodeURIComponent(P.raw || P.n.toUpperCase())}" aria-label="${t("pdf")}" title="${t("pdf")}">${icon("external-link")}</a>` : ""}
+        <button class="cal" data-ics="${esc(P.id)}" data-n="${i}" aria-label="${t("cal")}" title="${t("cal")}">${icon("calendar-plus")}</button>
+      </div>`;
+    }).join("");
+    return `<div class="card">
+      <div class="place-head"><div class="t"><div class="nm">${esc(shown(P))}</div><div class="meta">${esc(meta(P))}</div></div>
+        <button class="del" data-del="${esc(P.id)}" aria-label="${t("remove")}">${icon("trash-2")}</button></div>
+      ${status}${list}
+      ${more > 0 ? `<button class="more" data-more="${esc(P.id)}">${open ? t("less") : t("moreN")(more)}${icon(open ? "chevron-up" : "chevron-down")}</button>` : ""}
+    </div>`;
+  }).join("");
+
+  const sorter = places.length < 2 ? "" : `<div class="sort">${["added", "az", "next"].map(k =>
+    `<button data-sort="${k}" class="${S.sort === k ? "on" : ""}">${t("sort_" + k)}</button>`).join("")}</div>`;
+  content.innerHTML = card + `<div class="label-row"><div class="label">${t("myPlaces")}</div>${sorter}</div>` + cards;
+  paintIcons();
+}
+
+content.addEventListener("click", e => {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    // Zweistufig: Mülleimer → „?“ → entfernen; nach 5 s oder Klick woanders zurück
+    if (del.classList.contains("ask")) {
+      S.places = S.places.filter(k => k !== del.dataset.del); save(); render(); syncSoon(); return;
+    }
+    render();
+    const fresh = content.querySelector(`[data-del="${CSS.escape(del.dataset.del)}"]`);
+    fresh.classList.add("ask"); fresh.textContent = "?";
+    clearTimeout(askTimer); askTimer = setTimeout(render, 5000);
+    return;
+  }
+  const so = e.target.closest("[data-sort]");
+  if (so) { S.sort = so.dataset.sort; save(); render(); return; }
+  const mo = e.target.closest("[data-more]");
+  if (mo) { const k = mo.dataset.more; S.expanded = S.expanded.includes(k) ? S.expanded.filter(x => x !== k) : [...S.expanded, k]; save(); render(); return; }
+  const ics = e.target.closest("[data-ics]");
+  if (ics) downloadIcs(ics.dataset.ics, +ics.dataset.n);
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest(".del") && content.querySelector(".del.ask")) { clearTimeout(askTimer); render(); }
+}, true);
+
+function downloadIcs(id, i) {
+  const o = outagesFor(id)[i], P = BYID.get(id);
+  const z = s => s.replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//erm-outages//BG", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+    `UID:${id}-${z(o.su)}@erm-zapad-planned-power-outages`, `DTSTAMP:${z(new Date().toISOString())}`,
+    `DTSTART:${z(o.su)}`, `DTEND:${z(o.eu)}`,
+    `SUMMARY:${S.lang === "en" ? "Planned power cut" : "Планирано спиране на тока"} – ${shown(P)}`,
+    `URL:${location.origin}/`,
+    "BEGIN:VALARM", "TRIGGER:-PT12H", "ACTION:DISPLAY", `DESCRIPTION:${S.lang === "en" ? "Power cut tomorrow" : "Спиране на тока"}`, "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+  a.download = `${fold(P.ne)}-${o.s.slice(0, 10)}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ---------- Benachrichtigungen ----------
+const UA = navigator.userAgent;
+const isIOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+const inApp = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|Line\/|MicroMessenger/i.test(UA);
+const pushOK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const perm = () => ("Notification" in window ? Notification.permission : "default");
+// "blocked" = Browser erlaubt nicht, "paused" = erlaubt, aber aus, "on" = erlaubt und an
+const nState = () => perm() !== "granted" ? "blocked" : S.notify ? "on" : "paused";
+
+function renderBell() {
+  const st = nState(), hb = $("hbell"), denied = perm() === "denied";
+  hb.className = "hbell" + (st === "on" ? "" : " off");
+  hb.innerHTML = icon(st === "on" ? "bell-ring" : "bell-off") + (st === "blocked" ? '<span class="dot"></span>' : "");
+  hb.setAttribute("aria-label", t({ on: "nOn", paused: "nPaused", blocked: "nBlocked" }[st]));
+  $("nSheetBody").innerHTML = st === "blocked"
+    ? `<div class="notify blocked"><div class="ic">${icon("bell-off")}</div>
+         <div class="t"><div class="h">${t("nBlocked")}</div><div class="s">${denied ? t("deniedText") : t("nOffText")}</div></div></div>
+       ${denied ? "" : `<button class="btn" data-enable>${icon("bell-plus")}${t("allow")}</button>`}`
+    : `<div class="notify ${st}"><div class="ic">${icon(st === "on" ? "bell-ring" : "bell-off")}</div>
+         <div class="t"><div class="h">${st === "on" ? t("nOn") : t("nPaused")}</div><div class="s">${st === "on" ? t("nOnText") : t("nPausedText")}</div></div>
+         <button class="switch ${st === "on" ? "on" : ""}" id="nToggle" aria-label="${t("nOff")}"></button></div>
+       <div class="opt ${st === "on" ? "" : "dis"}">${icon("moon")}<span>${t("eve")}</span><button class="switch ${S.eve ? "on" : ""}" id="eveToggle" aria-label="${t("eve")}"></button></div>
+       ${st === "on" ? `<button class="btn ghost small" id="testPush">${icon("send")}${t("test")}</button>` : ""}`;
+}
+
+let VAPID = null, swReg = null;
+async function registration() {
+  if (!swReg) swReg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+  return swReg;
+}
+const b64 = s => { const p = "=".repeat((4 - s.length % 4) % 4); const raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, c => c.charCodeAt(0)); };
+async function pushSub(create) {
+  const reg = await registration();
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub && create) {
+    if (!VAPID) VAPID = (await (await fetch("/api/config")).json()).vapidPublicKey;
+    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+  }
+  return sub;
+}
+async function api(method, path, body) {
+  const r = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(path + " " + r.status);
+  return r.json();
+}
+async function sync() {
+  if (nState() !== "on") return;
+  const sub = await pushSub(true);
+  await api("POST", "/api/subscribe", { sub: sub.toJSON(), places: S.places, lang: S.lang, eve: S.eve });
+}
+let syncTimer = null;
+function syncSoon() { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync().catch(err => console.warn(err)), 600); }
+
+async function enable() {
+  if (inApp) return openSheet("inappSheet");
+  if (isIOS && !standalone) return openSheet("iosSheet");
+  if (!pushOK) return flash(t("unsupported"));
+  if (perm() !== "granted") await Notification.requestPermission();
+  if (perm() !== "granted") { render(); return; }
+  S.notify = true; save();
+  try { await sync(); render(); closeSheets(); flash(t("nOn"), t("nOnText")); }
+  catch (err) { console.warn(err); S.notify = false; save(); render(); flash(t("saveFail")); }
+}
+async function disable() {
+  S.notify = false; save(); render();
+  try { const sub = await pushSub(false); if (sub) await api("DELETE", "/api/subscribe", { endpoint: sub.endpoint }); }
+  catch (err) { console.warn(err); }
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-enable]")) enable(); });
+$("nSheet").addEventListener("click", async e => {
+  if (e.target.closest("#nToggle")) { if (S.notify) disable(); else enable(); }
+  if (e.target.closest("#eveToggle")) { S.eve = !S.eve; save(); render(); syncSoon(); }
+  const tb = e.target.closest("#testPush");
+  if (tb) {
+    tb.disabled = true;
+    try { await sync(); const sub = await pushSub(false); await api("POST", "/api/test", { endpoint: sub.endpoint }); flash(t("testSent")); }
+    catch (err) { flash(t("testFail")); }
+    tb.disabled = false;
+  }
+});
+
+// ---------- Sheets & Toast ----------
+function openSheet(id) { closeSheets(); $(id).classList.add("open"); $("sheetBg").classList.add("open"); paintIcons($(id)); }
+function closeSheets() { document.querySelectorAll(".sheet.open").forEach(s => s.classList.remove("open")); $("sheetBg").classList.remove("open"); }
+$("sheetBg").addEventListener("click", closeSheets);
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeSheets));
+$("hbell").addEventListener("click", () => openSheet("nSheet"));
+$("copyLink").addEventListener("click", async () => { try { await navigator.clipboard.writeText(location.origin + "/"); flash(t("copied")); } catch {} });
+let toastTimer = null;
+function flash(h, b = "") {
+  $("toastH").textContent = h; $("toastB").textContent = b;
+  $("toast").classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.remove("show"), b.length > 60 ? 6000 : 3500);
+}
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => { S.lang = b.dataset.lang; save(); render(); renderSugg(); syncSoon(); }));
+
+// ---------- Start ----------
+async function load() {
+  try {
+    const [places, cur] = await Promise.all([fetch("/places.json").then(r => r.json()), fetch("/api/outages").then(r => r.json())]);
+    buildPlaces(places, cur.extra);
+    OUT = new Map();
+    for (const [id, s, e, su, eu, pd] of cur.outages) { if (!OUT.has(id)) OUT.set(id, []); OUT.get(id).push({ s, e, su, eu, pd }); }
+    CHECKED = cur.checkedAt; LOADED = true;
+  } catch (err) { console.warn(err); LOADFAIL = true; }
+  render(); renderSugg();
+}
+render();
+load();
+if (pushOK) registration().catch(() => {});
+if (nState() === "on") syncSoon(); // Server-Stand auffrischen (z. B. nach Ablauf eines Abos)
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { if (LOADED) load(); checkVersion(); } });
+
+// ---------- Version ----------
+function showVersion() {
+  const d = APP_VERSION.date.split("T")[0].split("-").reverse().join(".");
+  $("ver").textContent = `${t("version")} ${APP_VERSION.v} · ${d}`;
+}
+async function checkVersion() {
+  try {
+    const r = await (await fetch("/version.json", { cache: "no-store" })).json();
+    $("update").hidden = !(r.v > APP_VERSION.v);
+  } catch {}
+}
+function hardReload() { location.replace("/?v=" + Date.now()); }
+$("reload").addEventListener("click", hardReload);
+$("update").addEventListener("click", hardReload);
+checkVersion();
+</script>
+</body>
+</html>

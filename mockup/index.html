@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Планирани спирания на тока</title>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="data.js"></script>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #fff; --ink: #0f172a; --muted: #64748b; --label: #94a3b8;
+    --line: #e5e7eb; --accent: #1d4ed8; --accent-soft: #e8eefc;
+    --warn: #b45309; --warn-bg: #fef3c7; --ok: #15803d; --ok-bg: #dcfce7; --danger: #dc2626;
+    --r: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 0 16px calc(32px + env(safe-area-inset-bottom)); }
+
+  /* Kopf */
+  header { background: var(--ink); color: #fff; padding: calc(14px + env(safe-area-inset-top)) 0 56px; }
+  header .wrap { padding-bottom: 0; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px; }
+  .brand .logo { width: 34px; height: 34px; border-radius: 10px; background: #facc15; color: var(--ink);
+    display: grid; place-items: center; }
+  .top-r { display: flex; align-items: center; gap: 8px; }
+  .hbell { position: relative; width: 38px; height: 38px; border-radius: 999px; background: rgba(255,255,255,.12);
+    color: #fff; display: grid; place-items: center; }
+  .hbell svg { width: 18px; height: 18px; }
+  .hbell.off { color: #94a3b8; }
+  .hbell .dot { position: absolute; top: 6px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: #ef4444;
+    box-shadow: 0 0 0 2px var(--ink); }
+  .notify.blocked .ic { background: #fee2e2; color: var(--danger); }
+  .notify.paused .ic { background: var(--bg); color: var(--muted); }
+  .opt.dis { opacity: .4; pointer-events: none; }
+  .hint { font-size: 14px; color: var(--muted); margin: 4px 0 0; }
+  #nsheet .notify, #nsheet .opt { padding-left: 0; padding-right: 0; }
+  .lang { display: flex; background: rgba(255,255,255,.12); border-radius: 999px; padding: 3px; }
+  .lang button { padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #cbd5e1; }
+  .lang button.on { background: #fff; color: var(--ink); }
+  h1 { font-size: 26px; line-height: 1.15; margin: 22px 0 6px; letter-spacing: -.01em; }
+  .sub { color: #cbd5e1; font-size: 15px; margin: 0; }
+
+  /* Suche */
+  .search { position: relative; margin-top: -32px; }
+  .field { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: var(--r);
+    padding: 0 14px; height: 58px; box-shadow: 0 6px 20px rgba(15,23,42,.12); border: 2px solid transparent; }
+  .field:focus-within { border-color: var(--accent); }
+  .field svg { color: var(--muted); }
+  .field input { flex: 1; border: 0; outline: 0; font: inherit; font-size: 17px; background: none; color: var(--ink); min-width: 0; }
+  .field .clear { color: var(--label); padding: 6px; }
+  .sugg { position: absolute; left: 0; right: 0; top: 64px; background: var(--card); border-radius: var(--r);
+    box-shadow: 0 12px 32px rgba(15,23,42,.18); overflow: hidden; z-index: 20; }
+  .sugg button { display: flex; width: 100%; text-align: left; align-items: center; gap: 12px; padding: 12px 14px;
+    border-top: 1px solid var(--line); min-height: 58px; }
+  .sugg button:first-child { border-top: 0; }
+  .sugg button:active, .sugg button.hl { background: var(--accent-soft); }
+  .sugg .nm { font-weight: 600; }
+  .sugg .nm mark { background: none; color: var(--accent); }
+  .sugg .meta { color: var(--muted); font-size: 13px; }
+  .sugg .add { margin-left: auto; color: var(--accent); }
+  .sugg .badge { margin-left: auto; font-size: 12px; color: var(--warn); background: var(--warn-bg);
+    border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+  .sugg .none { padding: 16px 14px; color: var(--muted); font-size: 15px; }
+
+  .label { font-size: 11px; color: var(--label); margin: 26px 4px 8px; }
+
+  /* Ort-Karten */
+  .card { background: var(--card); border-radius: var(--r); margin-bottom: 12px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15,23,42,.06); }
+  .place-head { display: flex; align-items: center; gap: 12px; padding: 14px 10px 12px 16px; }
+  .place-head .t { flex: 1; min-width: 0; }
+  .place-head .nm { font-size: 19px; font-weight: 700; }
+  .place-head .meta { color: var(--muted); font-size: 13px; }
+  .del { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--label);
+    font-weight: 800; font-size: 18px; transition: background .15s, color .15s; }
+  .del.ask { background: var(--danger); color: #fff; }
+  .status { display: flex; gap: 10px; align-items: center; margin: 0 12px 12px; padding: 12px; border-radius: 12px; font-weight: 600; font-size: 15px; }
+  .status.ok { background: var(--ok-bg); color: var(--ok); }
+  .status.warn { background: var(--warn-bg); color: var(--warn); }
+  .out { border-top: 1px solid var(--line); padding: 10px 12px 10px 16px; display: flex; gap: 14px; align-items: center; }
+  .day { width: 52px; flex: none; text-align: center; border-radius: 12px; background: var(--bg); padding: 5px 0 6px; }
+  .day .wd { font-size: 11px; color: var(--muted); }
+  .day .d { font-size: 20px; font-weight: 750; line-height: 1.05; }
+  .day .m { font-size: 11px; color: var(--muted); }
+  .day.soon { background: var(--warn-bg); }
+  .day.soon .wd, .day.soon .m { color: var(--warn); }
+  .out .time { flex: 1; min-width: 0; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cal { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px;
+    background: var(--bg); font-size: 14px; font-weight: 600; color: var(--ink); text-decoration: none; min-height: 40px; white-space: nowrap; }
+  .chip svg { width: 16px; height: 16px; }
+  .chip.pri { background: var(--accent-soft); color: var(--accent); }
+
+  /* Benachrichtigungen */
+  .notify { display: flex; gap: 14px; padding: 16px; align-items: center; }
+  .notify .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+  .notify.on .ic { background: var(--ok-bg); color: var(--ok); }
+  .notify .t { flex: 1; }
+  .notify .h { font-weight: 700; }
+  .notify .s { color: var(--muted); font-size: 14px; }
+  .btn { display: flex; width: 100%; justify-content: center; align-items: center; gap: 8px; height: 52px; border-radius: 14px;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 16px; }
+  .btn.ghost { background: var(--bg); color: var(--ink); }
+  .notify-btn { padding: 0 16px 16px; }
+  .switch { width: 50px; height: 30px; border-radius: 999px; background: var(--line); position: relative; flex: none; transition: background .2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+  .switch.on { background: var(--ok); }
+  .switch.on::after { transform: translateX(20px); }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); font-size: 15px; }
+  .opt span { flex: 1; }
+
+  /* Leerzustand */
+  .empty { text-align: center; padding: 34px 20px 10px; color: var(--muted); }
+  .empty .big { width: 64px; height: 64px; border-radius: 20px; background: var(--card); display: grid; place-items: center;
+    margin: 0 auto 14px; color: var(--accent); box-shadow: 0 1px 2px rgba(15,23,42,.06); }
+  .empty .big svg { width: 30px; height: 30px; }
+  .steps { text-align: left; margin: 18px auto 0; max-width: 340px; }
+  .steps div { display: flex; gap: 12px; align-items: center; padding: 8px 0; color: var(--ink); font-size: 15px; }
+  .steps b { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 13px; flex: none; }
+
+  .more { display: flex; width: 100%; justify-content: center; align-items: center; gap: 6px; padding: 14px;
+    border-top: 1px solid var(--line); color: var(--accent); font-weight: 600; font-size: 15px; }
+  footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; line-height: 1.6; }
+  footer a { color: var(--accent); }
+
+  /* Bottom Sheet (iPhone-Hinweis) */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 50; display: none; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 51; background: var(--card); border-radius: 22px 22px 0 0;
+    padding: 10px 20px calc(20px + env(safe-area-inset-bottom)); max-width: 480px; margin: 0 auto; transform: translateY(110%); transition: transform .25s; }
+  .sheet.open { transform: none; }
+  .sheet-bg.open { display: block; }
+  .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 14px; }
+  .sheet h2 { font-size: 20px; margin: 0 0 6px; }
+  .sheet p { color: var(--muted); margin: 0 0 14px; font-size: 15px; }
+  .sheet .step { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .sheet .step .n { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; }
+  .sheet .step .k { display: inline-flex; vertical-align: -4px; padding: 2px 6px; background: var(--bg); border-radius: 6px; }
+  .sheet .step .k svg { width: 16px; height: 16px; }
+
+  /* Push-Vorschau */
+  .toast { position: fixed; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); max-width: 460px; margin: 0 auto; z-index: 60;
+    background: rgba(250,250,250,.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 20px; padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.22); display: flex; gap: 12px; transform: translateY(-140%); transition: transform .35s cubic-bezier(.2,.9,.3,1.2); }
+  .toast.show { transform: none; }
+  .toast .logo { width: 38px; height: 38px; border-radius: 9px; background: #facc15; display: grid; place-items: center; flex: none; }
+  .toast .h { font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; }
+  .toast .h small { font-weight: 400; color: var(--muted); }
+  .toast .b { font-size: 14px; }
+  .demo-bar { margin-top: 28px; border-radius: var(--r); padding: 14px; font-size: 14px; color: #6b21a8;
+    background: repeating-linear-gradient(135deg, #faf5ff 0 12px, #f3e8ff 12px 24px); border: 1.5px dashed #c084fc; }
+  .demo-h { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+  .demo-bar p { margin: 6px 0 10px; color: #7e22ce; }
+  .demo-btn { display: flex; width: 100%; gap: 12px; align-items: center; text-align: left; background: #fff; border-radius: 12px;
+    padding: 10px 12px; margin-top: 8px; color: #581c87; }
+  .demo-btn span { display: flex; flex-direction: column; }
+  .demo-btn small { color: #9333ea; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><div class="logo"><i data-lucide="zap-off"></i></div><span data-t="brand"></span></div>
+      <div class="top-r">
+        <button class="hbell" id="hbell"></button>
+        <div class="lang"><button data-lang="bg">БГ</button><button data-lang="en">EN</button></div>
+      </div>
+    </div>
+    <h1 data-t="title"></h1>
+    <p class="sub" data-t="sub"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="search">
+    <label class="field">
+      <i data-lucide="search"></i>
+      <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button class="clear" id="clear" hidden><i data-lucide="x"></i></button>
+    </label>
+    <div class="sugg" id="sugg" hidden></div>
+  </div>
+
+  <div id="content"></div>
+
+  <div class="demo-bar">
+    <div class="demo-h"><i data-lucide="presentation"></i><span data-t="demo"></span></div>
+    <p data-t="demoText"></p>
+    <button class="demo-btn" id="demoPush"><i data-lucide="bell-ring"></i><span><b data-t="demoPush"></b><small data-t="demoPushS"></small></span></button>
+    <button class="demo-btn" id="demoPerm"><i data-lucide="shield-question"></i><span><b data-t="demoPerm"></b><small id="demoPermS"></small></span></button>
+    <button class="demo-btn" id="demoIos"><i data-lucide="smartphone"></i><span><b data-t="demoIos"></b><small data-t="demoIosS"></small></span></button>
+  </div>
+
+  <footer>
+    <span data-t="source"></span> <a href="https://info.ermzapad.bg/webint/vok/avplan.php?BBKING=FYI" target="_blank" rel="noopener">info.ermzapad.bg</a><br>
+    <span data-t="checked"></span> <span id="checked"></span><br>
+    <span data-t="unofficial"></span>
+  </footer>
+</main>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet">
+  <div class="grip"></div>
+  <h2 data-t="iosTitle"></h2>
+  <p data-t="iosText"></p>
+  <div class="step"><span class="n">1</span><span data-t="ios1"></span></div>
+  <div class="step"><span class="n">2</span><span data-t="ios2"></span></div>
+  <div class="step"><span class="n">3</span><span data-t="ios3"></span></div>
+  <button class="btn" id="sheetOk" style="margin-top:14px" data-t="ok"></button>
+</div>
+
+<div class="sheet" id="nsheet">
+  <div class="grip"></div>
+  <div id="nsheetBody"></div>
+  <button class="btn ghost" id="nsheetOk" style="margin-top:14px" data-t="done"></button>
+</div>
+
+<div class="toast" id="toast">
+  <div class="logo"><i data-lucide="zap-off"></i></div>
+  <div style="flex:1"><div class="h"><span id="toastH"></span><small data-t="now"></small></div><div class="b" id="toastB"></div></div>
+</div>
+
+<script>
+const ORIGINAL = "https://info.ermzapad.bg/webint/vok/avplan.php?BBKING=FYI";
+const T = {
+  bg: {
+    brand: "Ток · ЕРМ Запад", title: "Планирани спирания на тока",
+    sub: "Изберете населеното си място и получавайте известие, щом е обявено спиране.",
+    placeholder: "Населено място, напр. Банско",
+    myPlaces: "Моите места", noneFound: "Няма такова населено място в района на ЕРМ Запад.",
+    obsh: "общ.", obl: "обл.", planned: n => n === 1 ? "1 спиране" : `${n} спирания`,
+    ok_status: "Няма планирани спирания", warn_status: n => n === 1 ? "1 планирано спиране" : `${n} планирани спирания`,
+    part: "Засяга само част от населеното място. Проверете дали вашият адрес е включен.",
+    check: "Проверете адреса", cal: "В календара",
+    hours: (h, m) => (h ? `${h} ч.` : "") + (m ? ` ${m} мин.` : ""), multiDay: "до",
+    today: "Днес", tomorrow: "Утре",
+    nOff: "Известия", nOffText: "Получавайте съобщение на телефона, щом за вашите места бъде обявено спиране.",
+    nOn: "Известията са включени", nOnText: "Ще ви съобщим веднага щом има нов план.",
+    enable: "Включи известия", eve: "Напомняне вечерта преди спирането",
+    emptyTitle: "Как работи", e1: "Въведете населеното си място", e2: "Включете известията", e3: "Получавате съобщение, щом е планирано спиране",
+    source: "Данни:", checked: "Последна проверка:", unofficial: "Неофициална безплатна услуга. Не е свързана с ЕРМ Запад / Електрохолд.",
+    demo: "Демо – не е част от услугата", demoText: "Тези бутони само показват как ще изглежда услугата. Нищо не се изпраща.",
+    demoPush: "Покажи примерно известие", demoPushS: "Така ще изглежда съобщението на телефона",
+    demoIos: "Покажи указанието за iPhone", demoIosS: "Какво виждат потребителите на iPhone при включване",
+    iosTitle: "Известия на iPhone", iosText: "На iPhone известията работят само ако страницата е добавена към началния екран.",
+    ios1: 'Натиснете <span class="k"><i data-lucide="share"></i></span> „Сподели“ в долната лента',
+    ios2: 'Изберете <span class="k"><i data-lucide="square-plus"></i></span> „Добави към началния екран“',
+    ios3: "Отворете иконата от началния екран и включете известията",
+    ok: "Разбрах", done: "Готово",
+    nPaused: "Известията са изключени", nPausedText: "Разрешени са, но в момента не получавате съобщения.",
+    nBlocked: "Известията не са разрешени", allow: "Разреши известия",
+    deniedText: "Браузърът блокира известията за тази страница. Разрешете ги в настройките на браузъра.",
+    demoPerm: "Смени разрешението на браузъра", permNow: p => `Сега: ${p}. Натиснете, за да смените.`,
+    perm_default: "още не е питано", perm_denied: "блокирано", perm_granted: "разрешено", now: "сега",
+    pushH: "Планирано спиране на тока", pushB: (p, d, t) => `${p}: ${d}, ${t} ч. (част от населеното място)`,
+    remove: "Премахни", less: "По-малко", moreN: n => `Още ${n} ${n === 1 ? "спиране" : "спирания"}`, wd: ["нд","пн","вт","ср","чт","пт","сб"],
+    mo: ["яну","фев","мар","апр","май","юни","юли","авг","сеп","окт","ное","дек"],
+  },
+  en: {
+    brand: "Power · ERM Zapad", title: "Planned power cuts",
+    sub: "Pick your town or village and get notified as soon as a power cut is announced.",
+    placeholder: "Town or village, e.g. Bansko",
+    myPlaces: "My places", noneFound: "No such town or village in the ERM Zapad area.",
+    obsh: "mun.", obl: "reg.", planned: n => n === 1 ? "1 cut" : `${n} cuts`,
+    ok_status: "No planned power cuts", warn_status: n => n === 1 ? "1 planned power cut" : `${n} planned power cuts`,
+    part: "Affects only part of the place. Check whether your address is included.",
+    check: "Check address", cal: "Calendar",
+    hours: (h, m) => (h ? `${h} h` : "") + (m ? ` ${m} min` : ""), multiDay: "until",
+    today: "Today", tomorrow: "Tomorrow",
+    nOff: "Notifications", nOffText: "Get a message on your phone as soon as a power cut is planned for your places.",
+    nOn: "Notifications are on", nOnText: "We'll let you know as soon as a new plan is out.",
+    enable: "Turn on notifications", eve: "Reminder the evening before",
+    emptyTitle: "How it works", e1: "Enter your town or village", e2: "Turn on notifications", e3: "Get a message whenever a power cut is planned",
+    source: "Data:", checked: "Last checked:", unofficial: "Unofficial free service. Not affiliated with ERM Zapad / Electrohold.",
+    demo: "Demo – not part of the service", demoText: "These buttons only show what the service will look like. Nothing is sent.",
+    demoPush: "Show sample notification", demoPushS: "This is how the message will look on the phone",
+    demoIos: "Show iPhone instructions", demoIosS: "What iPhone users see when turning notifications on",
+    iosTitle: "Notifications on iPhone", iosText: "On iPhone, notifications only work once this page is added to the Home Screen.",
+    ios1: 'Tap <span class="k"><i data-lucide="share"></i></span> “Share” in the toolbar',
+    ios2: 'Choose <span class="k"><i data-lucide="square-plus"></i></span> “Add to Home Screen”',
+    ios3: "Open the icon on your Home Screen and turn on notifications",
+    ok: "Got it", done: "Done",
+    nPaused: "Notifications are off", nPausedText: "They're allowed, but you won't get messages right now.",
+    nBlocked: "Notifications not allowed", allow: "Allow notifications",
+    deniedText: "Your browser blocks notifications for this page. Allow them in your browser settings.",
+    demoPerm: "Switch browser permission", permNow: p => `Now: ${p}. Tap to switch.`,
+    perm_default: "not asked yet", perm_denied: "blocked", perm_granted: "allowed", now: "now",
+    pushH: "Planned power cut", pushB: (p, d, t) => `${p}: ${d}, ${t} (part of the place)`,
+    remove: "Remove", less: "Show less", moreN: n => `${n} more ${n === 1 ? "power cut" : "power cuts"}`, wd: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+    mo: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  },
+};
+
+// ---------- Zustand ----------
+const S = JSON.parse(localStorage.getItem("erm-demo") || "null") || { lang: "bg", places: [], notify: false, eve: true };
+// Demo-Zustände per URL: ?lang=en&p=ДОБРИНИЩЕ|БАНСКО,БАНСКО|БАНСКО&n=1&q=bans
+const U = new URLSearchParams(location.search);
+if (U.has("lang")) S.lang = U.get("lang");
+if (U.has("p")) S.places = U.get("p").split(",").filter(Boolean);
+if (U.has("n")) S.notify = U.get("n") === "1";
+if (U.has("perm")) S.permSim = U.get("perm");
+// Drei Zustände: "blocked" (Browser erlaubt nicht), "paused" (erlaubt, aber aus), "on"
+const perm = () => S.permSim || ("Notification" in window ? Notification.permission : "default");
+const nState = () => perm() !== "granted" ? "blocked" : S.notify ? "on" : "paused";
+const save = () => localStorage.setItem("erm-demo", JSON.stringify(S));
+const t = k => T[S.lang][k];
+
+// ---------- Namen ----------
+const TR = {а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"ts",ч:"ch",ш:"sh",щ:"sht",ъ:"a",ь:"y",ю:"yu",я:"ya"};
+const latin = s => s.toLowerCase().replace(/[а-я]/g, c => TR[c] ?? c);
+const title = s => s.toLowerCase().replace(/(^|[\s-])(\S)/g, (m, a, b) => a + b.toUpperCase());
+const shown = s => S.lang === "en" ? title(latin(s)) : title(s);
+const fold = s => latin(s).replace(/[^a-z]/g, "");
+const key = p => p[0] + "|" + p[1];
+
+const PLACES = DEMO.places.map(([p, ob, o]) => ({ p, ob, o, k: p + "|" + ob, f: fold(p), w: p.toLowerCase().split(/[\s-]+/).map(fold) }));
+const NOW = new Date();
+const OUT = DEMO.outages.map(([p, ob, s, e, part]) => ({ k: p + "|" + ob, s: new Date(s), e: new Date(e), part }))
+  .filter(o => o.e > NOW);
+const byPlace = k => OUT.filter(o => o.k === k).sort((a, b) => a.s - b.s);
+
+// ---------- Suche ----------
+const q = document.getElementById("q"), sugg = document.getElementById("sugg"), clearBtn = document.getElementById("clear");
+let hits = [], hl = 0;
+function search(text) {
+  const f = fold(text);
+  if (!f) return [];
+  const res = [];
+  for (const P of PLACES) {
+    let score = P.f.startsWith(f) ? 0 : P.w.some(w => w.startsWith(f)) ? 1 : P.f.includes(f) ? 2 : -1;
+    if (score >= 0) res.push([score, P]);
+  }
+  return res.sort((a, b) => a[0] - b[0] || a[1].p.length - b[1].p.length || a[1].p.localeCompare(b[1].p)).slice(0, 6).map(r => r[1]);
+}
+function markName(P, text) {
+  const name = shown(P.p), f = fold(text);
+  // Markierung nur, wenn Eingabe am Wortanfang passt (gleiche Schrift)
+  const i = name.toLowerCase().indexOf(text.trim().toLowerCase());
+  if (i < 0 || !text.trim()) return esc(name);
+  const n = text.trim().length;
+  return esc(name.slice(0, i)) + "<mark>" + esc(name.slice(i, i + n)) + "</mark>" + esc(name.slice(i + n));
+}
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function renderSugg() {
+  const text = q.value;
+  clearBtn.hidden = !text;
+  if (!text.trim()) { sugg.hidden = true; return; }
+  hits = search(text);
+  sugg.hidden = false;
+  if (!hits.length) { sugg.innerHTML = `<div class="none">${t("noneFound")}</div>`; return; }
+  sugg.innerHTML = hits.map((P, i) => {
+    const n = byPlace(P.k).length, mine = S.places.includes(P.k);
+    return `<button data-k="${esc(P.k)}" class="${i === hl ? "hl" : ""}">
+      <i data-lucide="map-pin"></i>
+      <span><div class="nm">${markName(P, text)}</div><div class="meta">${t("obsh")} ${shown(P.ob)} · ${t("obl")} ${shown(P.o)}</div></span>
+      ${n ? `<span class="badge">${t("planned")(n)}</span>` : mine ? `<i class="add" data-lucide="check"></i>` : `<i class="add" data-lucide="plus"></i>`}
+    </button>`;
+  }).join("");
+  lucide.createIcons();
+}
+function pick(k) {
+  if (!S.places.includes(k)) S.places.unshift(k);
+  save(); q.value = ""; hl = 0; renderSugg(); q.blur(); render();
+}
+q.addEventListener("input", () => { hl = 0; renderSugg(); });
+q.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown") { hl = Math.min(hl + 1, hits.length - 1); renderSugg(); e.preventDefault(); }
+  if (e.key === "ArrowUp") { hl = Math.max(hl - 1, 0); renderSugg(); e.preventDefault(); }
+  if (e.key === "Enter" && hits[hl]) pick(hits[hl].k);
+  if (e.key === "Escape") { q.value = ""; renderSugg(); }
+});
+sugg.addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) pick(b.dataset.k); });
+clearBtn.addEventListener("click", e => { e.preventDefault(); q.value = ""; renderSugg(); q.focus(); });
+document.addEventListener("click", e => { if (!e.target.closest(".search")) sugg.hidden = true; });
+q.addEventListener("focus", renderSugg);
+
+// ---------- Datum ----------
+const pad = n => String(n).padStart(2, "0");
+const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+function dayLabel(d) {
+  const tm = new Date(NOW); tm.setDate(tm.getDate() + 1);
+  if (sameDay(d, NOW)) return t("today");
+  if (sameDay(d, tm)) return t("tomorrow");
+  return null;
+}
+function timeRange(o) {
+  return sameDay(o.s, o.e) ? `${hm(o.s)}–${hm(o.e)}` : `${hm(o.s)} – ${t("multiDay")} ${o.e.getDate()}. ${t("mo")[o.e.getMonth()]} ${hm(o.e)}`;
+}
+
+// ---------- Hauptansicht ----------
+const content = document.getElementById("content");
+let askTimer = null;
+function render() {
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll("[data-t]").forEach(el => { const v = t(el.dataset.t); if (typeof v === "string") el.innerHTML = v; });
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.lang === S.lang));
+  q.placeholder = t("placeholder");
+  document.title = t("title");
+  document.getElementById("demoPermS").textContent = t("permNow")(t("perm_" + perm()));
+  document.getElementById("checked").textContent = `${NOW.getDate()}. ${t("mo")[NOW.getMonth()]}, ${hm(new Date(NOW - 23 * 60000))}`;
+
+  if (!S.places.length) {
+    content.innerHTML = `<div class="empty">
+      <div class="big"><i data-lucide="bell-ring"></i></div>
+      <div style="font-weight:700;color:var(--ink);font-size:17px">${t("emptyTitle")}</div>
+      <div class="steps"><div><b>1</b>${t("e1")}</div><div><b>2</b>${t("e2")}</div><div><b>3</b>${t("e3")}</div></div>
+    </div>`;
+    lucide.createIcons(); return;
+  }
+
+  const st = nState(), denied = perm() === "denied";
+  const notify = st !== "blocked" ? ""
+    : `<div class="card"><div class="notify"><div class="ic"><i data-lucide="bell"></i></div>
+         <div class="t"><div class="h">${t("nOff")}</div><div class="s">${denied ? t("deniedText") : t("nOffText")}</div></div></div>
+         ${denied ? "" : `<div class="notify-btn"><button class="btn" data-enable><i data-lucide="bell-plus"></i>${t("enable")}</button></div>`}</div>`;
+  const hb = document.getElementById("hbell");
+  hb.className = "hbell" + (st === "on" ? "" : " off");
+  hb.innerHTML = `<i data-lucide="${st === "on" ? "bell-ring" : "bell-off"}"></i>${st === "blocked" ? '<span class="dot"></span>' : ""}`;
+  hb.setAttribute("aria-label", t({ on: "nOn", paused: "nPaused", blocked: "nBlocked" }[st]));
+  document.getElementById("nsheetBody").innerHTML = st === "blocked"
+    ? `<div class="notify blocked"><div class="ic"><i data-lucide="bell-off"></i></div>
+         <div class="t"><div class="h">${t("nBlocked")}</div><div class="s">${denied ? t("deniedText") : t("nOffText")}</div></div></div>
+       ${denied ? "" : `<button class="btn" data-enable><i data-lucide="bell-plus"></i>${t("allow")}</button>`}`
+    : `<div class="notify ${st === "on" ? "on" : "paused"}"><div class="ic"><i data-lucide="${st === "on" ? "bell-ring" : "bell-off"}"></i></div>
+         <div class="t"><div class="h">${st === "on" ? t("nOn") : t("nPaused")}</div><div class="s">${st === "on" ? t("nOnText") : t("nPausedText")}</div></div>
+         <button class="switch ${st === "on" ? "on" : ""}" id="nToggle"></button></div>
+       <div class="opt ${st === "on" ? "" : "dis"}"><i data-lucide="moon"></i><span>${t("eve")}</span><button class="switch ${S.eve ? "on" : ""}" id="eveToggle"></button></div>`;
+
+  const cards = S.places.map(k => {
+    const P = PLACES.find(p => p.k === k); if (!P) return "";
+    const outs = byPlace(k);
+    const status = outs.length
+      ? `<div class="status warn"><i data-lucide="zap-off"></i>${t("warn_status")(outs.length)}</div>`
+      : `<div class="status ok"><i data-lucide="circle-check"></i>${t("ok_status")}</div>`;
+    const open = S.expanded?.includes(k), more = outs.length - 2;
+    const list = outs.map((o, i) => {
+      if (i >= 2 && !open) return "";
+      const lbl = dayLabel(o.s);
+      return `<div class="out">
+        <div class="day ${lbl ? "soon" : ""}"><div class="wd">${lbl || t("wd")[o.s.getDay()]}</div><div class="d">${o.s.getDate()}</div><div class="m">${t("mo")[o.s.getMonth()]}</div></div>
+        <div class="time">${timeRange(o)}</div>
+        <button class="cal" data-ics="${esc(k)}" data-i="${i}" aria-label="${t("cal")}" title="${t("cal")}"><i data-lucide="calendar-plus"></i></button>
+      </div>`;
+    }).join("");
+    return `<div class="card">
+      <div class="place-head"><div class="t"><div class="nm">${shown(P.p)}</div><div class="meta">${t("obsh")} ${shown(P.ob)} · ${t("obl")} ${shown(P.o)}</div></div>
+        <button class="del" data-del="${esc(k)}" aria-label="${t("remove")}"><i data-lucide="trash-2"></i></button></div>
+      ${status}${list}${more > 0 ? `<button class="more" data-more="${esc(k)}">${open ? t("less") : t("moreN")(more)}<i data-lucide="${open ? "chevron-up" : "chevron-down"}"></i></button>` : ""}</div>`;
+  }).join("");
+
+  content.innerHTML = notify + `<div class="label">${t("myPlaces")}</div>` + cards;
+  lucide.createIcons();
+}
+
+content.addEventListener("click", e => {
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    // Zweistufig: Mülleimer → „?“ → entfernen; nach 5 s zurück
+    if (del.classList.contains("ask")) {
+      S.places = S.places.filter(k => k !== del.dataset.del); save(); render(); return;
+    }
+    document.querySelectorAll(".del.ask").forEach(b => { b.classList.remove("ask"); b.innerHTML = '<i data-lucide="trash-2"></i>'; });
+    del.classList.add("ask"); del.textContent = "?";
+    clearTimeout(askTimer); askTimer = setTimeout(render, 5000);
+    return;
+  }
+  const mo = e.target.closest("[data-more]");
+  if (mo) { S.expanded = S.expanded || []; const k = mo.dataset.more;
+    S.expanded = S.expanded.includes(k) ? S.expanded.filter(x => x !== k) : [...S.expanded, k]; render(); return; }
+  const ics = e.target.closest("[data-ics]");
+  if (ics) downloadIcs(ics.dataset.ics, +ics.dataset.i);
+});
+document.addEventListener("click", e => { if (!e.target.closest(".del")) document.querySelectorAll(".del.ask").length && render(); }, true);
+
+function downloadIcs(k, i) {
+  const o = byPlace(k)[i], P = PLACES.find(p => p.k === k);
+  const f = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "T" + pad(d.getHours()) + pad(d.getMinutes()) + "00";
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//erm-outages//demo//EN", "BEGIN:VEVENT",
+    `UID:${f(o.s)}-${fold(P.p)}@erm-outages`, `DTSTART;TZID=Europe/Sofia:${f(o.s)}`, `DTEND;TZID=Europe/Sofia:${f(o.e)}`,
+    `SUMMARY:${t("pushH")} – ${shown(P.p)}`, `DESCRIPTION:${t("part")} ${ORIGINAL}`,
+    "BEGIN:VALARM", "TRIGGER:-PT12H", "ACTION:DISPLAY", `DESCRIPTION:${t("pushH")}`, "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+  a.download = `${fold(P.p)}-${f(o.s).slice(0, 8)}.ics`; a.click();
+}
+
+async function enable() {
+  const ios = /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
+  if (ios) { closeSheet(); return openSheet(); }
+  if (S.permSim) S.permSim = "granted";
+  else if ("Notification" in window) await Notification.requestPermission();
+  if (perm() === "granted") { S.notify = true; save(); render(); closeSheet(); flash(t("nOn")); }
+  else { save(); render(); }
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-enable]")) enable(); });
+
+function flash(msg) {
+  const el = document.getElementById("toast");
+  document.getElementById("toastH").textContent = msg;
+  document.getElementById("toastB").textContent = t("nOnText");
+  el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+// ---------- Sprache, Sheet, Demo ----------
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => { S.lang = b.dataset.lang; save(); render(); renderSugg(); }));
+const sheet = document.getElementById("sheet"), sheetBg = document.getElementById("sheetBg");
+function openSheet() { sheet.classList.add("open"); sheetBg.classList.add("open"); lucide.createIcons(); }
+const nsheet = document.getElementById("nsheet");
+function closeSheet() { sheet.classList.remove("open"); nsheet.classList.remove("open"); sheetBg.classList.remove("open"); }
+document.getElementById("hbell").addEventListener("click", () => { nsheet.classList.add("open"); sheetBg.classList.add("open"); lucide.createIcons(); });
+document.getElementById("nsheetOk").addEventListener("click", closeSheet);
+nsheet.addEventListener("click", e => {
+  if (e.target.closest("#nToggle")) { S.notify = !S.notify; save(); render(); }
+  if (e.target.closest("#eveToggle")) { S.eve = !S.eve; save(); render(); }
+});
+sheetBg.addEventListener("click", closeSheet);
+document.getElementById("sheetOk").addEventListener("click", closeSheet);
+document.getElementById("demoIos").addEventListener("click", openSheet);
+document.getElementById("demoPerm").addEventListener("click", () => {
+  const order = ["default", "denied", "granted"];
+  S.permSim = order[(order.indexOf(perm()) + 1) % 3]; save(); render();
+});
+document.getElementById("demoPush").addEventListener("click", () => {
+  const k = S.places.find(k => byPlace(k).length) || "ДОБРИНИЩЕ|БАНСКО";
+  const o = byPlace(k)[0] || OUT[0], P = PLACES.find(p => p.k === (byPlace(k)[0] ? k : o.k));
+  document.getElementById("toastH").textContent = t("pushH");
+  document.getElementById("toastB").textContent = t("pushB")(shown(P.p), `${t("wd")[o.s.getDay()]} ${o.s.getDate()}. ${t("mo")[o.s.getMonth()]}`, timeRange(o));
+  const el = document.getElementById("toast"); el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 4500);
+});
+
+render();
+if (U.has("q")) { q.value = U.get("q"); renderSugg(); }
+if (U.get("open") === "n") document.getElementById("hbell").click();
+</script>
+</body>
+</html>

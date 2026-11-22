@@ -1,0 +1,18 @@
+{
+  "name": "erm-zapad-outages",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:parse": "node tools/test-parse.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.9",
+    "@netlify/functions": "^6.1.1",
+    "unpdf": "^1.9.1",
+    "web-push": "^4.0.0"
+  },
+  "devDependencies": {
+    "lucide": "^1.77.0",
+    "pdfjs-dist": "^6.5.438"
+  }
+}
