@@ -45,14 +45,16 @@ Hintergrundfunktion `job.mts` (`POST /api/job`, bis 15 min), die die eigentliche
 | `POST /api/subscribe` | `{sub, places, lang, eve}` – Abo anlegen/ändern (nur bekannte Push-Dienste) |
 | `DELETE /api/subscribe` | `{endpoint}` – Abo löschen (beim Ausschalten in der App) |
 | `POST /api/test` | `{endpoint}` – Probe-Push ans eigene Gerät, höchstens 3 je 10 min |
-| `POST /api/run` | Lauf von Hand starten (im Hintergrund), Header `X-Admin-Token` (Wert in `.admin-token`); `?what=remind` für die Erinnerung |
+| `POST /api/run` | Lauf von Hand starten (im Hintergrund), Header `X-Admin-Token` (Wert `ADMIN_TOKEN` in `.env`); `?what=remind` für die Erinnerung |
 | `GET /api/run` | Protokoll der letzten 30 Läufe (gleicher Header) |
 | `POST /api/job` | Hintergrundfunktion, nur intern (gleicher Header) |
 
 Speicher (Netlify Blobs): `erm-data` (`state`, `current`, `plan/<datum>`, `pdf/<datum>`), `erm-subs` (ein Eintrag je Gerät: Push-Adresse,
 Orts-IDs, Sprache, Vorabend ja/nein). Keine Namen, Telefonnummern oder E-Mails.
 
-Umgebungsvariablen: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CONTACT`, `ADMIN_TOKEN`.
+Umgebungsvariablen bei Netlify: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (Secret), `VAPID_CONTACT`, `ADMIN_TOKEN` (Secret).
+Sicherungskopie aller Werte lokal in `.env` (nicht im Repo). Das VAPID-Paar möglichst nie ändern; falls doch,
+erkennt die App beim nächsten Öffnen das Abo mit dem alten Schlüssel, meldet es ab und legt ein neues an.
 
 ## Glocke oben rechts
 

@@ -244,7 +244,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = {"v":9,"date":"2026-11-22T14:12"}; // wird von tools/bump-version.mjs gesetzt
+const APP_VERSION = {"v":10,"date":"2026-11-22T14:24"}; // wird von tools/bump-version.mjs gesetzt
 const T = {
   bg: {
     brand: "Ток · ЕРМ Запад", title: "Планирани спирания на тока",
@@ -589,12 +589,21 @@ const b64 = s => { const p = "=".repeat((4 - s.length % 4) % 4); const raw = ato
 async function pushSub(create) {
   const reg = await registration();
   let sub = await reg.pushManager.getSubscription();
-  if (!sub && create) {
-    if (!VAPID) VAPID = (await (await fetch("/api/config")).json()).vapidPublicKey;
-    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
+  if (create) {
+    if (!VAPID) VAPID = (await (await fetch("/api/config", { cache: "no-store" })).json()).vapidPublicKey;
+    // Abo mit altem Absender-Schlüssel (nach Schlüsselwechsel auf dem Server) erneuern
+    const key = sub?.options?.applicationServerKey;
+    if (sub && key && !sameKey(new Uint8Array(key), b64(VAPID))) {
+      const old = sub.endpoint;
+      await sub.unsubscribe().catch(() => {});
+      api("DELETE", "/api/subscribe", { endpoint: old }).catch(() => {});
+      sub = null;
+    }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID) });
   }
   return sub;
 }
+const sameKey = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 async function api(method, path, body) {
   const r = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(path + " " + r.status);
