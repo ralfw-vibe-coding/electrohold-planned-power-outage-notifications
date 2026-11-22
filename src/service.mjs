@@ -141,13 +141,28 @@ export async function send(key, sub, payload) {
   }
 }
 
-async function* allSubs() {
+/** Führt fn für alle Elemente aus, höchstens `limit` gleichzeitig. */
+async function pool(items, limit, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); }
+  }));
+  return out;
+}
+
+/** Alle Abos laden (parallel, 25 gleichzeitig). */
+async function allSubs() {
   const store = subsStore();
-  const { blobs } = await store.list();
-  for (const { key } of blobs) {
-    const s = await store.get(key, { type: "json" });
-    if (s?.sub && s.places?.length) yield [key, s];
-  }
+  const { blobs } = await store.list(); // ohne paginate: alle Seiten
+  const subs = await pool(blobs, 25, async ({ key }) => [key, await store.get(key, { type: "json" })]);
+  return subs.filter(([, s]) => s?.sub && s.places?.length);
+}
+
+/** Nachrichten parallel verschicken (50 gleichzeitig); liefert die Zahl erfolgreicher Sendungen. */
+async function sendAll(jobs) {
+  const ok = await pool(jobs, 50, ([key, sub, payload]) => send(key, sub, payload));
+  return ok.filter(Boolean).length;
 }
 
 const T = {
@@ -168,16 +183,16 @@ export function fmtOutage(o, lang, withDate = true) {
 /** Neue Abschaltungen an alle Abonnenten der betroffenen Orte melden (eine Nachricht je Abo). */
 export async function announce(fresh, extra) {
   if (!fresh.length) return 0;
-  let sent = 0;
-  for await (const [key, s] of allSubs()) {
+  const jobs = [];
+  for (const [key, s] of await allSubs()) {
     const mine = fresh.filter((o) => s.places.includes(o.id));
     if (!mine.length) continue;
     const lang = s.lang === "en" ? "en" : "bg";
     const body = mine.slice(0, 6).map((o) => `${placeName(o.id, lang, extra)}: ${fmtOutage(o, lang)}`).join("\n")
       + (mine.length > 6 ? `\n+${mine.length - 6}` : "");
-    if (await send(key, s.sub, { title: T[lang].newTitle, body, tag: "new-" + mine[0].start, url: "/" })) sent++;
+    jobs.push([key, s.sub, { title: T[lang].newTitle, body, tag: "new-" + mine[0].start, url: "/" }]);
   }
-  return sent;
+  return sendAll(jobs);
 }
 
 /** Erinnerung am Vorabend für alle Abschaltungen, die morgen beginnen. */
@@ -186,17 +201,35 @@ export async function remind() {
   const tomorrow = addDays(sofiaNow().slice(0, 10), 1);
   const due = outages.filter(([, start]) => start.startsWith(tomorrow)).map(([id, start, end]) => ({ id, start, end }));
   if (!due.length) return 0;
-  let sent = 0;
-  for await (const [key, s] of allSubs()) {
+  const jobs = [];
+  for (const [key, s] of await allSubs()) {
     if (s.eve === false) continue;
     const mine = due.filter((o) => s.places.includes(o.id));
     if (!mine.length) continue;
     const lang = s.lang === "en" ? "en" : "bg";
     const body = mine.map((o) => `${placeName(o.id, lang, extra)}: ${fmtOutage(o, lang, false)}`).join("\n");
-    if (await send(key, s.sub, { title: T[lang].remTitle, body, tag: "rem-" + tomorrow, url: "/" })) sent++;
+    jobs.push([key, s.sub, { title: T[lang].remTitle, body, tag: "rem-" + tomorrow, url: "/" }]);
   }
-  return sent;
+  return sendAll(jobs);
 }
+
+/** Lauf ausführen und im Protokoll (letzte 30 Läufe) festhalten. */
+export async function runJob(what) {
+  const started = new Date().toISOString();
+  let entry;
+  try {
+    if (what === "remind") entry = { what, reminded: await remind() };
+    else { const r = await update(); entry = { what: "check", fetched: r.fetched, total: r.total, fresh: r.fresh.length, sent: await announce(r.fresh, r.extra) }; }
+  } catch (err) {
+    entry = { what, error: String(err?.message || err) };
+  }
+  entry = { started, finished: new Date().toISOString(), ...entry };
+  const runs = (await data().get("runs", { type: "json" })) || [];
+  await data().setJSON("runs", [entry, ...runs].slice(0, 30));
+  console.log(JSON.stringify(entry));
+  return entry;
+}
+export const runs = async () => (await data().get("runs", { type: "json" })) || [];
 
 /** Gespeicherte Kopie des Original-PDFs für ein Plandatum (YYYY-MM-DD) */
 export async function planPdf(date) {

@@ -12,14 +12,19 @@ Push-Nachricht aufs Handy, sobald dort eine Stromabschaltung geplant ist. Bulgar
 
 ## Ablauf
 
-1. **Alle 2 Stunden** (`netlify/functions/check.mts`, Minute 20) holt der Dienst die Liste der PDF-Pläne,
+1. **3× täglich** (`netlify/functions/check.mts`: 04:20, 10:20, 15:20 UTC = 06:20, 12:20, 17:20 Uhr Sofia im Winter, im Sommer +1 h) holt der Dienst die Liste der PDF-Pläne,
    lädt nur neue oder geänderte PDFs (die Quelle sperrt nach ca. 100 Anfragen, Antwort `tomuch`),
    liest Region → Gemeinde → Ort → von/bis aus und ordnet jeden Ort einem EKATTE-Code zu.
-2. Jede Abschaltung, die noch nie gemeldet wurde, geht als Push an alle Abos dieses Orts – eine Nachricht je Gerät.
+2. Jede Abschaltung, die noch nie gemeldet wurde, geht als Push an alle Abos dieses Orts – eine Nachricht je Gerät,
+   **einmalig** (Schlüssel Ort + Beginn + Ende; ändert ERM Zapad die Zeiten, gilt das als neue Abschaltung).
 3. **Täglich 16:00 UTC** (18:00 Sofia im Winter, 19:00 im Sommer, `remind.mts`) kommt die Erinnerung an Abschaltungen von morgen
    (abschaltbar).
 
 Die PDFs nennen nur „Част от <Ort>“ (Teil des Orts), keine Straßen.
+
+Zeitgesteuerte Funktionen dürfen nur 30 s laufen. `check.mts` und `remind.mts` starten deshalb nur die
+Hintergrundfunktion `job.mts` (`POST /api/job`, bis 15 min), die die eigentliche Arbeit macht: Abos parallel laden
+(25 gleichzeitig) und Nachrichten parallel senden (50 gleichzeitig). Erloschene Abos (Push-Dienst meldet 404/410) werden gelöscht.
 
 ## Orte
 
@@ -40,7 +45,9 @@ Die PDFs nennen nur „Част от <Ort>“ (Teil des Orts), keine Straßen.
 | `POST /api/subscribe` | `{sub, places, lang, eve}` – Abo anlegen/ändern (nur bekannte Push-Dienste) |
 | `DELETE /api/subscribe` | `{endpoint}` – Abo löschen (beim Ausschalten in der App) |
 | `POST /api/test` | `{endpoint}` – Probe-Push ans eigene Gerät, höchstens 3 je 10 min |
-| `POST /api/run` | Prüfung von Hand, Header `X-Admin-Token` (Wert in `.admin-token`); `?what=remind` für die Erinnerung |
+| `POST /api/run` | Lauf von Hand starten (im Hintergrund), Header `X-Admin-Token` (Wert in `.admin-token`); `?what=remind` für die Erinnerung |
+| `GET /api/run` | Protokoll der letzten 30 Läufe (gleicher Header) |
+| `POST /api/job` | Hintergrundfunktion, nur intern (gleicher Header) |
 
 Speicher (Netlify Blobs): `erm-data` (`state`, `current`, `plan/<datum>`, `pdf/<datum>`), `erm-subs` (ein Eintrag je Gerät: Push-Adresse,
 Orts-IDs, Sprache, Vorabend ja/nein). Keine Namen, Telefonnummern oder E-Mails.
